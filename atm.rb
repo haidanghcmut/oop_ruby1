@@ -1,33 +1,16 @@
 require "csv"
+require './user.rb'
 
-# class User
-class User
-    attr_accessor :owner, :balance, :card_number, :password
-    def initialize(owner, balance, card_number, password)
-        @owner = owner
-        @card_number = card_number
-        @password = password
-        @balance = balance
-    end
 
-    def to_hash
-        {
-            owner: @owner,
-            balance: @balance,
-            card_number: @card_number,
-            password: @password
-        }
-    end
-end
 
 class ATM
-    # Initialize
+    # Khởi tao chương trình
     def initialize
        @accounts = load_accounts_from_csv
        @current_account = []
     end
      
-    # Start
+    # Bắt đầu chương trình
     def start
         puts '=== ATM ==='
         login
@@ -36,20 +19,20 @@ class ATM
         puts 'Thank you for using the ATM. Goodbye!'
     end
 
-    # Login
+    # Đăng nhập vào hệ thống
     def login
         puts 'Please enter your card number:'
         card_number_enter = gets.chomp
         puts 'Please enter your password:'
         password_enter = gets.chomp
         @accounts.each do |account|
-            if account.card_number == card_number_enter.to_i && account.password == password_enter.to_i
-                @current_account = account
-                break
-            else
-                @current_account = nil
-            end
-        end
+                if account.card_number == card_number_enter.to_i && account.password == password_enter.to_i
+                    @current_account = account
+                    break
+                else
+                    @current_account = nil
+                end
+          end
 
         if @current_account.nil? 
             puts 'Invalid card number or password. Please try again.'
@@ -62,7 +45,7 @@ class ATM
         end
     end
 
-#    Menu
+     # Menu hiển thị khi đăng nhập thành công
     def show_menu
         puts '=== Menu ==='
         puts '1. Withdraw'
@@ -72,7 +55,7 @@ class ATM
         puts '5. Exit'
     end
 
-    # Process menu choice
+    # Xử lý lựa chọn của người dùng
     def process_menu_choice
         choice = gets.chomp.to_i
         case choice
@@ -91,7 +74,7 @@ class ATM
         end
     end
 
-    # Withdraw money
+    # Rút tiền
     def withdraw
         puts 'How much would you like to withdraw (press q to exit)?'
         amount = gets.chomp
@@ -107,35 +90,17 @@ class ATM
         if amount > @current_account.balance
             puts 'Insufficient funds.'
             puts 'Are you want to withdraw again? (y/n)'
-            choice = gets.chomp.downcase
-            if choice == 'y'
-                withdraw
-            elsif choice == 'n'
-                show_menu
-            end
+            check_choice1
         else
             @current_account.balance -= amount
             save_accounts_to_csv
+            puts "Thank you! Here's your money: $#{amount}"
             puts "Your new balance is $#{@current_account.balance}"
-            puts 'Would you like to make another withdrawal? (y/n)'
-            check_choice1
+            show_menu
         end
     end
 
-    # Check choice
-    def check_choice1
-        choice = gets.chomp.downcase
-            if choice == 'y'
-                withdraw
-            elsif choice == 'n'
-                show_menu
-            else
-                puts 'Invalid choice. Please try again.'
-                check_choice1
-            end
-    end
-
-    # Check balance
+    # Kiểm tra số dư
     def check_balance
         puts "Your balance is $#{@current_account.balance}"
         puts 'Would you like to make another transaction? (y/n)'
@@ -154,7 +119,7 @@ class ATM
                 transfer
             end
         else
-            puts 'Are you sure you want to exit? (y/n)'
+            puts 'Are you sure want to exit? (y/n)'
             choice = gets.chomp.downcase
             if choice == 'y'
                 log_out
@@ -164,8 +129,7 @@ class ATM
         end
     end
 
-
-    # Deposit money
+    # Nạp tiền vào tài khoản
     def deposit
         puts 'How much would you like to deposit (press q to exit)?'
         amount = gets.chomp
@@ -177,26 +141,12 @@ class ATM
         end
         @current_account.balance += amount.to_i
         save_accounts_to_csv
+        puts "Thank you! Your money has been deposited."
         puts "Your new balance is $#{@current_account.balance}"
-        puts 'Would you like to make another deposit? (y/n)'
-        check_choice2
+        show_menu
     end
 
-    # Check choice2
-    def check_choice2
-        choice = gets.chomp.downcase
-        if choice == 'y'
-            deposit
-        elsif choice == 'n'
-            show_menu
-        else 
-            puts 'Invalid choice. Please try again.'
-            check_choice2
-        end
-    end
-
-
-    # Transfer money
+    # Chuyển tiền cho người khác
     def transfer
         puts 'Enter the account number to transfer to (press q to exit): '
         account_number = gets.chomp
@@ -204,6 +154,9 @@ class ATM
             return show_menu
         elsif account_number.to_i < 0 || /^[a-zA-Z[:punct:]]+$/.match(account_number)
             puts 'Invalid account number.'
+            return transfer
+        elsif account_number.to_i == @current_account.card_number
+            puts 'You cannot transfer to your own account.'
             return transfer
         end
         recipient_account = @accounts.find { |account| account.card_number == account_number.to_i }
@@ -226,51 +179,44 @@ class ATM
         end
     end
 
-
-    # log out
+    # Thoát khỏi chương trình
     def log_out
         @current_account = nil
     end
 
-
-    # load file CSV
+    # Tải dữ liệu từ file CSV
     def load_accounts_from_csv
-        accountt = []
+        load_account = []
         if (File.file?('./accounts.csv') && !File.zero?('./accounts.csv'))
-            # tables = CSV.parse(File.read('./accounts.csv'))
-            # tables.each do |row|
-            #     table = row[0].split(';')
-            #     owner = row[0].split(';').first               
-            #     balance = table[1].to_i
-            #     card_number = table[2].to_i
-            #     password = table[3].to_i
-            #     accountt << User.new(owner, balance, card_number, password)
-            CSV.foreach('./accounts.csv', headers: true, col_sep: ";") do |row|
-                owner = row["owner"]
-                balance = row["balance"].to_i
-                card_number = row["card_number"].to_i
-                password = row["password"].to_i
-                accountt << User.new(owner, balance, card_number, password)
-            end
-            return accountt
-        else 
+                CSV.foreach('./accounts.csv', headers: true, col_sep: ";") do |row|
+                    owner = row["owner"]
+                    balance = row["balance"].to_i
+                    card_number = row["card_number"].to_i
+                    password = row["password"].to_i
+                    load_account << User.new(owner, balance, card_number, password)
+                end
+          return load_account
+        elsif File.zero?('./accounts.csv') || !File.file?('./accounts.csv')
             File.new("./accounts.csv", 'w')   
         end
     end
 
-
-    # save file CSV 
+    # lưu dữ liệu vào file CSV
     def save_accounts_to_csv
         data = CSV.read('accounts.csv', headers: true, col_sep: ";")
         CSV.open('accounts.csv', 'w', col_sep: ";") do |csv|
             csv << data.headers
-          @accounts.each do |account|
-            csv << [account.owner, account.balance, account.card_number, account.password]
-          end
+            @accounts.each do |account|
+                csv << [account.owner, account.balance, account.card_number, account.password]
+            end
+       end
     end
-   end
 end
 
-
-atm = ATM.new
-atm.start
+# Khởi động chương trình
+  atm = ATM.new
+  if File.zero?('./accounts.csv') || !File.file?('./accounts.csv')
+    puts "Invalid data. Please try again."
+  else
+    atm.start
+  end
