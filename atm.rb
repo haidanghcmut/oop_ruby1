@@ -1,14 +1,12 @@
 require "csv"
-require './user.rb'
-require './abstract.rb'
+require './user_atm.rb'
+require './abstract_atm_core.rb'
 
 
-class ATM < Abstract
+class ATM < User
     # Khởi tạo chương trình
-    def initialize
-       @accounts = load_accounts_from_csv
-       @current_account = []
-    end
+
+   include AbstractAtmCore
      
     # Bắt đầu chương trình
     def start
@@ -42,20 +40,12 @@ class ATM < Abstract
     def withdraw
         puts 'How much would you like to withdraw (press q to exit)?'
         amount = gets.chomp
-        check_keyword_withdraw(amount)
-        if amount.to_i > @current_account.balance
-            puts 'Insufficient funds.'
-            return withdraw
-        else
-            @current_account.balance -= amount.to_i
-            save_accounts_to_csv
-            puts "Thank you! Here's your money: $#{amount.to_i}"
-            puts "Your new balance is $#{@current_account.balance}"
-            show_menu
-        end
+       if check_keyword_withdraw(amount) == false
+          return show_menu
+       else
+          check_amount_withdraw(amount)
+      end
     end
-
-   
 
     # Kiểm tra số dư
     def check_balance
@@ -69,35 +59,27 @@ class ATM < Abstract
     def deposit
         puts 'How much would you like to deposit (press q to exit)?'
         amount = gets.chomp
-        check_deposit_keyword(amount)
-        @current_account.balance += amount.to_i
-        save_accounts_to_csv
-        puts "Thank you! Your money has been deposited."
-        puts "Your new balance is $#{@current_account.balance}"
-        show_menu
+        if check_deposit_keyword(amount) == false
+            return show_menu
+        else 
+            @current_account.balance += amount.to_i
+            save_accounts_to_csv
+            puts "Thank you! Your money has been deposited."
+            puts "Your new balance is $#{@current_account.balance}"
+            show_menu
+        end
     end
 
     # Chuyển tiền cho người khác
     def transfer
         puts 'Enter the account number to transfer to (press q to exit): '
         account_number = gets.chomp
-        check_transfer_keyword(account_number)
-        recipient_account = @accounts.find { |account| account.card_number == account_number.to_i }
-        if recipient_account.nil?
-            puts 'Invalid account number.'
-            return transfer
-        else 
-            puts 'Enter the money to transfer:'
-            amount = gets.chomp
-            check_transfer_amount_keyword(amount)
+        if check_transfer_keyword(account_number) == false
+            return show_menu
+        else
+            check_transfer_account_number(account_number)
         end
     end
-
-    # Tải dữ liệu từ file CSV
-    
-
-    # lưu dữ liệu vào file CSV
-    
 end
 
 # Khởi động chương trình

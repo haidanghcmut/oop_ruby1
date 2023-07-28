@@ -1,5 +1,11 @@
 
-class Abstract
+module AbstractAtmCore  
+
+    def initialize
+        @accounts = load_accounts_from_csv
+        @current_account = []
+     end
+    # Kiểm tra tài khoản tồn tại hay không 
     def check_account(card_number_press, password_enter_press)
         @accounts.each do |account|
             if account.card_number == card_number_press.to_i && account.password == password_enter_press.to_i
@@ -11,6 +17,7 @@ class Abstract
           end
     end
 
+    # Hiển thị kết quả đăng nhập
     def display_result
         if @current_account.nil? 
             puts 'Invalid card number or password. Please try again.'
@@ -23,17 +30,33 @@ class Abstract
         end
     end
 
+    # Kiểm tra ký tự hợp lệ khi rút tiền
     def check_keyword_withdraw(keyword)
         if keyword == 'q'
-            return show_menu
+            return false
         elsif keyword.to_i < 0 || /^[a-zA-Z[:punct:]]+$/.match(keyword)
             puts 'Invalid amount.'
-            exit
+            return false
         else
             keyword = keyword.to_i
         end
     end
 
+    # Kiểm tra số tiền hợp lệ để rút
+    def check_amount_withdraw(keyword)
+        if keyword.to_i > @current_account.balance
+            puts 'Insufficient funds.'
+            return withdraw
+        else
+            @current_account.balance -= keyword.to_i
+            save_accounts_to_csv
+            puts "Thank you! Here's your money: $#{keyword.to_i}"
+            puts "Your new balance is $#{@current_account.balance}"
+            show_menu
+        end
+    end
+
+    # Hiển thị menu
     def show_menu
         puts '=== Menu ==='
         puts '1. Withdraw'
@@ -43,6 +66,7 @@ class Abstract
         puts '5. Exit'
     end
 
+    # Kiểm tra ký tư hợp lệ khi kiểm tra số dư
     def check_balance_keyword(keyword)
         if keyword == 'y'
             puts '=== Menu ==='
@@ -91,38 +115,53 @@ class Abstract
 
     def check_deposit_keyword(keyword)
         if keyword == 'q'
-            return show_menu
+            puts 'Exiting deposit...'
+            return false
         elsif keyword.to_i < 0 || /^[a-zA-Z[:punct:]]+$/.match(keyword)
             puts 'Invalid amount.'
-            exit
+            return false
         end
     end
 
+#    Kiểm tra ký tự hợp lệ khi chuyển tiền
     def check_transfer_keyword(keyword)
         if keyword.to_s === 'q'
-             show_menu
+             puts 'Exiting transfer...'
+             return false
         elsif keyword.to_i < 0 || /^[a-zA-Z[:punct:]]+$/.match(keyword)
             puts 'Invalid account number.'
-            exit
+            return false
         elsif keyword.to_i == @current_account.card_number
             puts 'You cannot transfer to your own account.'
-            return transfer
+            return false
         end
     end
 
-    def check_transfer_amount_keyword(keyword)
-        if keyword.to_i > @current_account.balance || keyword.to_i < 0 || /^[a-zA-Z[:punct:]]+$/.match(keyword)
-            puts 'Insufficient funds.'
-            exit
-        else
-            @current_account.balance -= keyword.to_i
-            recipient_account.balance += keyword.to_i
-            save_accounts_to_csv
-            puts "Your new balance is $#{@current_account.balance}"
-            return transfer
+    # kiểm tra hợp lệ khi chuyển tiền
+    def check_transfer_account_number(keyword)
+        recipient_account = @accounts.find { |account| account.card_number == keyword.to_i }
+        load_accounts_from_csv
+        if recipient_account.nil?
+            puts 'Invalid account number.'
+            return show_menu
+        else 
+            puts 'Enter the money to transfer:'
+            amount = gets.chomp
+            if amount.to_i > @current_account.balance || amount.to_i < 0 || /^[a-zA-Z[:punct:]]+$/.match(amount)
+                puts 'Insufficient funds.'
+                return show_menu
+            else
+                @current_account.balance -= amount.to_i
+                recipient_account.balance += amount.to_i
+                save_accounts_to_csv
+                puts "Your new balance is $#{@current_account.balance}"
+                return transfer
+            end
         end
-    end
+     end
 
+   
+     # Tải dữ liệu từ file CSV
     def load_accounts_from_csv
         load_account = []
         if (File.file?('./accounts.csv') && !File.zero?('./accounts.csv'))
@@ -139,6 +178,7 @@ class Abstract
         end
     end
 
+#    Lưu dữ liệu vào file CSV
     def save_accounts_to_csv
         data = CSV.read('accounts.csv', headers: true, col_sep: ";")
         CSV.open('accounts.csv', 'w', col_sep: ";") do |csv|
